@@ -84,12 +84,7 @@ async function main() {
   }
 
   fs.writeFileSync(path.join(SITE, "widget.js"), widget.generate(PAGES_URL || "http://127.0.0.1:5555"));
-  fs.writeFileSync(
-    path.join(SITE, "index.html"),
-    `<!doctype html><meta charset="utf-8"><title>全站榜单</title>` +
-      `<h1>全站榜单</h1><p>模块地址：<code>${PAGES_URL}/widget.js</code></p>` +
-      `<ul>${Object.keys(sources).map((n) => `<li><a href="data/${n}.json">${n}</a></li>`).join("")}</ul>`
-  );
+  fs.copyFileSync(path.join(__dirname, "index.html"), path.join(SITE, "index.html"));
 
   console.log("\n=== 汇总 ===");
   for (const [k, v] of Object.entries(summary)) console.log(k.padEnd(8), v);
