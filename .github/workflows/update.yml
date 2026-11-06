@@ -1,0 +1,59 @@
+name: Update rankings & deploy to Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "只更新指定源（逗号分隔，如 douban,tmdb）；留空更新全部"
+        required: false
+        default: ""
+  # 如需定时，取消注释（UTC 09:00 = 北京时间 17:00）
+  # schedule:
+  #   - cron: "0 9 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # 1) 本分支：只含 scripts/build.js 与本 workflow
+      - uses: actions/checkout@v4
+      # 2) 上游代码（lib/）：取上游最新 main；想锁定版本可改成 ${{ github.repository }} 取自己 fork 的 main
+      - uses: actions/checkout@v4
+        with:
+          repository: MakkaPakka518/VPS-Widget
+          ref: main
+          path: upstream
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build site
+        run: node scripts/build.js
+        env:
+          UPSTREAM_DIR: upstream
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TRAKT_TOKEN: ${{ secrets.TRAKT_TOKEN }}
+          SOURCES: ${{ inputs.sources }}
+          PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
